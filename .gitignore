@@ -1,0 +1,22 @@
+# R RELATED FILES
+
+*.Rproj.user
+*.Ruserdata
+*.Rhistory
+*.RData
+*.Rdata
+
+
+
+.Rproj.user
+*.core
+slurm*
+*.csv
+
+*.nc 
+
+*nc.aux.xml
+
+*.out
+
+results/
