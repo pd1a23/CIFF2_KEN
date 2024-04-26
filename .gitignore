@@ -11,7 +11,7 @@
 .Rproj.user
 *.core
 slurm*
-*.csv
+
 
 *.nc 
 
