@@ -20,3 +20,5 @@ slurm*
 *.out
 
 results/
+raster/unprepared
+raster/livestock
