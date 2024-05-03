@@ -154,13 +154,16 @@ indicator_fit <- function(indicator_name) {
   
   print("starting district aggregation")
   
-  # aggregation_to_boundaries(
-  #   round1_prediction,
-  #   change = FALSE,
-  #   target_boundary_file = "shapes/district_boundary.gpkg",
-  #   file_name = indicator_round1,
-  #   boundary_type = "district"
-  # )
+  aggregation_to_boundaries(
+    round1_prediction,
+    change = FALSE,
+    target_boundary_file = "shapes/round1/sdr_subnational_boundaries2.shp",
+    file_name = indicator_round1,
+    boundary_type = "county",
+    raw=T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round1"
+  )
   aggregation_to_boundaries(
     round2_prediction,
     change = FALSE,
@@ -431,8 +434,7 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   
   covariates_formula <- formula(aspatial_model) %>%
     update(y ~ .)
-  
-  
+ 
   
   
   range0 <-
@@ -773,8 +775,8 @@ prediction <- function(model, prediction_data, mesh, round) {
     as.matrix(prediction_covariates_matrix_non_miss) %*% as.matrix(xX) +
       as.matrix(A_prediction) %*% as.matrix(xS) +
       as.matrix(cluster_to_district_prediction_matrix) %*% as.matrix(xD) +
-      as.matrix(cluster_to_state_prediction_matrix) %*% as.matrix(xT) #+
-    #as.matrix(sIID)
+      as.matrix(cluster_to_state_prediction_matrix) %*% as.matrix(xT) +
+      as.matrix(sIID)
   )
   
   
@@ -817,17 +819,17 @@ aggregation_to_boundaries <-
     
     
     if (round == "round1") {
-      pop <- rast("raster/round1/ken_ppp_2014.tif") %>%
+      pop <- rast("raster/round1/ken_ppp_2014_1km_Aggregated_UNadj.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
-          method = "sum",
+          method = "average",
           threads = T
         ) / 1000
     } else if (round == "round2") {
-      pop <- rast("raster/KEN_population_v2_0_gridded.tif") %>%
+      pop <- rast("raster/round2/ken_ppp_2020_1km_Aggregated_UNadj.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
-          method = "sum",
+          method = "average",
           threads = T
         ) / 1000
     }
