@@ -380,15 +380,15 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   outer_boundary_edge <-
     max_edge_length * 3
   
-  # library(raster)
-  # boundary_segment <-
-  #   terra::union(country_boundary) %>%
-  #   as(., "Spatial") %>%
-  #   inla.sp2segment()
-  # detach(package:raster)
-  #
-  #
-  # boundary_segment<-fmesher::fm_as_segm(country_boundary %>% as(.,"Spatial"))
+  library(raster)
+  boundary_segment <-
+    terra::union(country_boundary) %>%
+    as(., "Spatial") %>%
+    inla.sp2segment()
+  detach(package:raster)
+
+
+  boundary_segment<-fmesher::fm_as_segm(country_boundary %>% as(.,"Spatial"))
   
   
   
@@ -397,6 +397,13 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   country_all_points <-
     rasterize(country_boundary, mastergrid_water_subtract) %>% as.points
   
+  # 
+  # country_boundary_non_convex_hull <- fmesher::fm_nonconvex_hull_inla(
+  #   x = geom(country_all_points)[,3:4],
+  #   convex = 0.005,
+  #   concave = 0.03,
+  #   resolution = 1957
+  # )
   
   # country_boundary_non_convex_hull <- fmesher::fm_nonconvex_hull_inla(
   #   x = geom(country_all_points)[,3:4],
@@ -609,10 +616,12 @@ prediction <- function(model, prediction_data, mesh, round) {
     district_boundaries <-
       vect("shapes/round1/sdr_subnational_boundaries2.shp") %>%
       project(mastergrid) %>%
+      aggregate(by="REGCODE") %>% 
       mutate(id = 1:nrow(.))
   } else if (round == "round2") {
     district_boundaries <-
       vect("shapes/round2/sdr_subnational_boundaries.shp") %>%
+      aggregate(by="REGCODE") %>% 
       project(mastergrid) %>%
       mutate(id = 1:nrow(.))
     
@@ -682,10 +691,13 @@ prediction <- function(model, prediction_data, mesh, round) {
   cluster_to_district_prediction <-
     terra::extract(
       mastergrid_water_subtract_district_crop,
-      district_boundaries %>% select(id),
+      district_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
       cells = T,
       touches = T
     ) %>% na.omit
+  
+  
+
   
   
   cluster_to_district_prediction_matrix <-
@@ -703,13 +715,14 @@ prediction <- function(model, prediction_data, mesh, round) {
   
   
   state_boundaries <-
-    disagg(state_boundaries)[all_cluster_locations]
+    disagg(state_boundaries)[all_cluster_locations] %>% 
+    aggregate(by="REGCODE")
   
   
   cluster_to_state_prediction <-
     terra::extract(
       mastergrid_water_subtract_district_crop,
-      state_boundaries %>% select(id),
+      state_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
       cells = T,
       touches = T
     ) %>%
