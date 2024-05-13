@@ -1,0 +1,24 @@
+# R RELATED FILES
+
+*.Rproj.user
+*.Ruserdata
+*.Rhistory
+
+
+
+
+.Rproj.user
+*.core
+slurm*
+
+
+*.nc 
+
+*nc.aux.xml
+
+*.out
+
+results/
+raster/unprepared
+raster/livestock
+validation/
