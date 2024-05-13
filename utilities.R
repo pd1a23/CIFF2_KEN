@@ -220,51 +220,51 @@ transform_and_scale <- function(untransformed_data,round) {
     # Account for any covariates that have negative values- it just
     # shifts them to have a minimum of 0
     
-    if (any(grid < 0, na.rm = T)) {
-      covariate = covariate + abs(min(grid, na.rm = T))
-      grid = grid + abs(min(grid, na.rm = T))
-    }
-    
-    transformation_inter <-
-      variable_transformation(untransformed_data %>% dplyr::select(total, count),
-                              covariate,
-                              grid)
-    transformed_covariate <- transformation_inter[[1]]
-    transformation <- transformation_inter[[2]]
+    # if (any(grid < 0, na.rm = T)) {
+    #   covariate = covariate + abs(min(grid, na.rm = T))
+    #   grid = grid + abs(min(grid, na.rm = T))
+    # }
+    # 
+    # transformation_inter <-
+    #   variable_transformation(untransformed_data %>% dplyr::select(total, count),
+    #                           covariate,
+    #                           grid)
+    # transformed_covariate <- transformation_inter[[1]]
+    # transformation <- transformation_inter[[2]]
     
     
     # Apply power transformation according to the
     # appended power transformation number
     
-    if (is.na(transformation)) {
-      transformed_grid <- grid
-      
-    } else if (transformation == 0) {
-      transformed_grid <- log(grid + delta(grid))
-      
-    } else if (transformation < 0) {
-      transformed_grid <-
-        -((grid + delta(grid)) ^ transformation)
-      
-    } else {
-      transformed_grid <- grid ^ transformation
-      
-    }
+    # if (is.na(transformation)) {
+    #   transformed_grid <- grid
+    #   
+    # } else if (transformation == 0) {
+    #   transformed_grid <- log(grid + delta(grid))
+    #   
+    # } else if (transformation < 0) {
+    #   transformed_grid <-
+    #     -((grid + delta(grid)) ^ transformation)
+    #   
+    # } else {
+    #   transformed_grid <- grid ^ transformation
+    #   
+    # }
     
-    scaled_transformed_grid <-
-      scale(transformed_grid)
+    scaled_grid <-
+      scale(grid)
     
-    scaling_attributes <- attributes(scaled_transformed_grid)
+    scaling_attributes <- attributes(scaled_grid)
     
-    scaled_transformed_covariate <-
-      (transformed_covariate - scaling_attributes$`scaled:center`) / scaling_attributes$`scaled:scale`
+    scaled_covariate <-
+      (covariate - scaling_attributes$`scaled:center`) / scaling_attributes$`scaled:scale`
     
     
     
     scaled_transformed_cluster_data[[covariate_name]] <-
-      scaled_transformed_covariate
+      scaled_covariate
     scaled_transformed_raster_data[[covariate_name]] <-
-      as.vector(scaled_transformed_grid)
+      as.vector(scaled_grid)
     
     
   }
@@ -273,6 +273,7 @@ transform_and_scale <- function(untransformed_data,round) {
   # A list of #aggregated, transformed and scaled raster
   # values of the covariates
   
+  scaled_transformed_cluster_data
   
   return(list(
     scaled_transformed_cluster_data,

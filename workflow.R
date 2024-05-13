@@ -245,9 +245,9 @@ data_preparation <- function(indicator_round) {
                full.names = T)
   
   indicator_data <-
-    read_xlsx(
+    read_csv(
       indicator_file,
-      skip = 7,
+      skip=1,
       col_names = c("DHSCLUST", "total", "count", "prop")
     )
   
@@ -419,6 +419,28 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   #                       resolution = 50)
   
   load("shapes/outer_boundary.Rdata")
+  # 
+  
+  
+  # country_boundary_non_convex_hull <-
+  #   fmesher::fm_nonconvex_hull_inla(
+  #     x = geom(country_all_points)[, 3:4],
+  #     convex = 0.5,
+  #     concave = 0.3,
+  #     resolution = 200
+  #   )
+  # 
+  # 
+  # 
+  # outer_boundary <-
+  #   inla.nonconvex.hull(
+  #     points = geom(country_all_points)[, 3:4],
+  #     convex = outer_boundary_edge,
+  #     resolution = 50
+  #   )
+  # 
+
+  
   
   
   max.edge <- max(diff(range(geom(
@@ -508,13 +530,13 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   
   
   stack_est <- inla.stack(
-    A = list(A_est, 1, 1, 1, 1),
+    A = list(A_est, 1, 1, 1),
     data = list(y = scaled_transformed_cluster_data$count, n = scaled_transformed_cluster_data$total),
     effects = list(
       s = 1:spde$n.spde,
       r = 1:nrow(scaled_transformed_cluster_data),
       d = scaled_transformed_cluster_data$ADM1DHS,
-      t = scaled_transformed_cluster_data$DHSREGCO,
+      # t = scaled_transformed_cluster_data$DHSREGCO,
       scaled_transformed_covariates_and_intercept
     ),
     tag = "est"
@@ -534,8 +556,8 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
       . ~ -1 + int + . + f(s, model = spde) +
         f(r, model = "iid", hyper = iid_hyperprior) +
         f(d, model = "iid", hyper = iid_hyperprior)
-      + f(t, model = "iid", hyper =
-            iid_hyperprior)
+      # + f(t, model = "iid", hyper =
+      #       iid_hyperprior)
     )
   
   env <- environment()
@@ -579,7 +601,7 @@ prediction <- function(model, prediction_data, mesh, round) {
   id_s <- which(model_contents$tag == "s")
   id_r <- which(model_contents$tag == "r")
   id_d <- which(model_contents$tag == "d")
-  id_t <- which(model_contents$tag == "t")
+  # id_t <- which(model_contents$tag == "t")
   id_x <- which(model_contents$tag == "int")
   
   index_S <-
@@ -588,8 +610,8 @@ prediction <- function(model, prediction_data, mesh, round) {
     model_contents$start[id_r] - 1 + (1:model_contents$length[id_r])
   index_D <-
     model_contents$start[id_d] - 1 + (1:model_contents$length[id_d])
-  index_T <-
-    model_contents$start[id_t] - 1 + (1:model_contents$length[id_t])
+  # index_T <-
+  #   model_contents$start[id_t] - 1 + (1:model_contents$length[id_t])
   index_X <-
     model_contents$start[id_x] - 1 + (1:ncol(model$model.matrix))
   
@@ -616,13 +638,13 @@ prediction <- function(model, prediction_data, mesh, round) {
     district_boundaries <-
       vect("shapes/round1/sdr_subnational_boundaries2.shp") %>%
       project(mastergrid) %>%
-      aggregate(by="REGCODE") %>% 
+      arrange(REGCODE) %>% 
       mutate(id = 1:nrow(.))
   } else if (round == "round2") {
     district_boundaries <-
       vect("shapes/round2/sdr_subnational_boundaries.shp") %>%
-      aggregate(by="REGCODE") %>% 
       project(mastergrid) %>%
+      arrange(REGCODE) %>% 
       mutate(id = 1:nrow(.))
     
     
@@ -635,10 +657,10 @@ prediction <- function(model, prediction_data, mesh, round) {
   
   all_cluster_locations <-
     rbind(cluster_locations1, cluster_locations2)
-  
-  district_boundaries <-
-    disagg(district_boundaries)[all_cluster_locations]
-  
+  # 
+  # district_boundaries <-
+  #   disagg(district_boundaries)[all_cluster_locations]
+  # 
   # mastergrid_water_subtract_district_crop <-
   #   mastergrid_water_subtract %>% crop(district_boundaries, mask = T)
   #
@@ -694,8 +716,11 @@ prediction <- function(model, prediction_data, mesh, round) {
       district_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
       cells = T,
       touches = T
-    ) %>% na.omit
-  
+    ) %>% na.omit %>% 
+    left_join(
+      values(district_boundaries),
+      by=c("ID"="id")
+    )
   
 
   
@@ -706,32 +731,32 @@ prediction <- function(model, prediction_data, mesh, round) {
                  x = 1)[prediction_id_nonmiss, ]
   
   
-  state_boundaries <-
-    vect("shapes/round1/sdr_subnational_boundaries.shp") %>%
-    project(mastergrid) %>%
-    mutate(id = 1:nrow(.))
+  # state_boundaries <-
+  #   vect("shapes/round1/sdr_subnational_boundaries.shp") %>%
+  #   project(mastergrid) %>%
+  #   mutate(id = 1:nrow(.))
+  # 
+  # 
+  # 
+  # 
+  # state_boundaries <-
+  #   disagg(state_boundaries)[all_cluster_locations] %>% 
+  #   aggregate(by="REGCODE")
+  # 
   
-  
-  
-  
-  state_boundaries <-
-    disagg(state_boundaries)[all_cluster_locations] %>% 
-    aggregate(by="REGCODE")
-  
-  
-  cluster_to_state_prediction <-
-    terra::extract(
-      mastergrid_water_subtract_district_crop,
-      state_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
-      cells = T,
-      touches = T
-    ) %>%
-    na.omit
-  
-  cluster_to_state_prediction_matrix <-
-    sparseMatrix(i = cluster_to_state_prediction$cell,
-                 j = cluster_to_state_prediction$ID,
-                 x = 1)[prediction_id_nonmiss,]
+  # cluster_to_state_prediction <-
+  #   terra::extract(
+  #     mastergrid_water_subtract_district_crop,
+  #     state_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
+  #     cells = T,
+  #     touches = T
+  #   ) %>%
+  #   na.omit
+  # 
+  # cluster_to_state_prediction_matrix <-
+  #   sparseMatrix(i = cluster_to_district_prediction$cell,
+  #                j = cluster_to_district_prediction$OTHREGCO,
+  #                x = 1)[prediction_id_nonmiss,]
   
   
   
@@ -771,12 +796,12 @@ prediction <- function(model, prediction_data, mesh, round) {
   xS <- posterior_latent[index_S,]
   xD <-
     cbind(model$summary.random$d$ID, posterior_latent[index_D,]) %>% as_tibble() %>% right_join(tibble(V1 =
-                                                                                                         1:nrow(district_boundaries))) %>%
+                                                                                                         district_boundaries$REGCODE)) %>%
     mutate(across(everything(), ~ replace_na(.x, 0))) %>% select(-V1) %>% as.matrix
-  xT <-
-    cbind(model$summary.random$t$ID, posterior_latent[index_T,]) %>% as_tibble() %>% right_join(tibble(V1 =
-                                                                                                         1:nrow(state_boundaries))) %>%
-    mutate(across(everything(), ~ replace_na(.x, 0))) %>% select(-V1) %>% as.matrix
+  # xT <-
+  #   cbind(model$summary.random$t$ID, posterior_latent[index_T,]) %>% as_tibble() %>% right_join(tibble(V1 =
+  #                                                                                                        unique(district_boundaries$OTHREGCO))) %>%
+  #   mutate(across(everything(), ~ replace_na(.x, 0))) %>% select(-V1) %>% as.matrix
   
   xX <- posterior_latent[index_X,]
   
@@ -787,9 +812,9 @@ prediction <- function(model, prediction_data, mesh, round) {
   inv_lpred_inter <- as.matrix(
     as.matrix(prediction_covariates_matrix_non_miss) %*% as.matrix(xX) +
       as.matrix(A_prediction) %*% as.matrix(xS) +
-      as.matrix(cluster_to_district_prediction_matrix) %*% as.matrix(xD) +
-      as.matrix(cluster_to_state_prediction_matrix) %*% as.matrix(xT) +
-      as.matrix(sIID)
+      as.matrix(cluster_to_district_prediction_matrix) %*% as.matrix(xD) #+
+      # as.matrix(cluster_to_state_prediction_matrix) %*% as.matrix(xT) +
+      # as.matrix(sIID)
   )
   
   

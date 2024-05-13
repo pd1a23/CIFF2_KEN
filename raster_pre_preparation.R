@@ -34,7 +34,7 @@ nl_2013 <-
 nl_2014 <-
   rast("Z:/Projects/WP000006_CIFF/Raster/KEN/VIIRS/ken_viirs_100m_2014.tif")
 
-nl_2012_2014 <- (nl_2013 + nl_2014) / 3
+nl_2012_2014 <- (nl_2012+nl_2013 + nl_2014) / 3
 
 writeRaster(nl_2012_2014, filename = "raster/unprepared/round1/nighttime_lights.tif",overwrite=T)
 
