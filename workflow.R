@@ -316,6 +316,7 @@ data_preparation <- function(indicator_round) {
   
   scaled_transformed_intermediate <-
     transform_and_scale(untransformed_data = dat, round = round)
+
   
   scaled_transformed_cluster_data <-
     scaled_transformed_intermediate[[1]] %>%
@@ -421,24 +422,7 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   load("shapes/outer_boundary.Rdata")
   # 
   
-  
-  # country_boundary_non_convex_hull <-
-  #   fmesher::fm_nonconvex_hull_inla(
-  #     x = geom(country_all_points)[, 3:4],
-  #     convex = 0.5,
-  #     concave = 0.3,
-  #     resolution = 200
-  #   )
-  # 
-  # 
-  # 
-  # outer_boundary <-
-  #   inla.nonconvex.hull(
-  #     points = geom(country_all_points)[, 3:4],
-  #     convex = outer_boundary_edge,
-  #     resolution = 50
-  #   )
-  # 
+
 
   
   
@@ -506,27 +490,7 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
          crs = "+proj=longlat +datum=WGS84 +no_defs") %>%
     project(mastergrid)
   
-  ##NEED TO CHECK IF ROUND 1 OR 2
-  
-  # if (round == "round1") {
-  #   district_boundaries <-
-  #     vect("shapes/round1/sdr_subnational_boundaries2.shp") %>%
-  #     project(mastergrid) %>%
-  #     erase() %>%
-  #     mutate(district_id = 1:nrow(.))
-  #
-  # } else if (round == "round2") {
-  #   district_boundaries <-
-  #     vect("shapes/round2/sdr_subnational_boundaries.shp") %>%
-  #     project(mastergrid) %>%
-  #     erase() %>%
-  #     mutate(district_id = 1:nrow(.))
-  #
-  # }
-  
-  
-  
-  
+
   
   
   stack_est <- inla.stack(
@@ -536,8 +500,7 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
       s = 1:spde$n.spde,
       r = 1:nrow(scaled_transformed_cluster_data),
       d = scaled_transformed_cluster_data$ADM1DHS,
-      # t = scaled_transformed_cluster_data$DHSREGCO,
-      scaled_transformed_covariates_and_intercept
+         scaled_transformed_covariates_and_intercept
     ),
     tag = "est"
   )
@@ -549,15 +512,17 @@ model_fitting <- function(scaled_transformed_cluster_data, round) {
   iid_hyperprior <-
     list(theta = list(prior = "loggamma", param = c(2, 1)))
   
+  pc_prior<-list(theta=list(prior="pc.prec", param=c(1,0.05)))
+   
+  
   
   full_formula <-
     update(
       covariates_formula,
       . ~ -1 + int + . + f(s, model = spde) +
         f(r, model = "iid", hyper = iid_hyperprior) +
-        f(d, model = "iid", hyper = iid_hyperprior)
-      # + f(t, model = "iid", hyper =
-      #       iid_hyperprior)
+        f(d, model = "iid", hyper = pc_prior)
+
     )
   
   env <- environment()
@@ -601,7 +566,7 @@ prediction <- function(model, prediction_data, mesh, round) {
   id_s <- which(model_contents$tag == "s")
   id_r <- which(model_contents$tag == "r")
   id_d <- which(model_contents$tag == "d")
-  # id_t <- which(model_contents$tag == "t")
+
   id_x <- which(model_contents$tag == "int")
   
   index_S <-
@@ -610,8 +575,7 @@ prediction <- function(model, prediction_data, mesh, round) {
     model_contents$start[id_r] - 1 + (1:model_contents$length[id_r])
   index_D <-
     model_contents$start[id_d] - 1 + (1:model_contents$length[id_d])
-  # index_T <-
-  #   model_contents$start[id_t] - 1 + (1:model_contents$length[id_t])
+
   index_X <-
     model_contents$start[id_x] - 1 + (1:ncol(model$model.matrix))
   
@@ -676,10 +640,7 @@ prediction <- function(model, prediction_data, mesh, round) {
     dplyr::relocate(model$names.fixed) %>%
     as.data.frame()
   
-  # prediction_covariates_rast <- rast(mastergrid, nlyrs = ncol(prediction_covariates_matrix))
-  # values(prediction_covariates_rast) <- prediction_covariates_matrix
-  # values(prediction_covariates_rast)[values(inland_water_pct) == 100] <- NA
-  # prediction_covariates_rast <- prediction_covariates_rast %>% crop(district_boundaries, mask = T)
+
   
   
   
@@ -731,33 +692,7 @@ prediction <- function(model, prediction_data, mesh, round) {
                  x = 1)[prediction_id_nonmiss, ]
   
   
-  # state_boundaries <-
-  #   vect("shapes/round1/sdr_subnational_boundaries.shp") %>%
-  #   project(mastergrid) %>%
-  #   mutate(id = 1:nrow(.))
-  # 
-  # 
-  # 
-  # 
-  # state_boundaries <-
-  #   disagg(state_boundaries)[all_cluster_locations] %>% 
-  #   aggregate(by="REGCODE")
-  # 
-  
-  # cluster_to_state_prediction <-
-  #   terra::extract(
-  #     mastergrid_water_subtract_district_crop,
-  #     state_boundaries %>% select(REGCODE) %>% arrange(REGCODE),
-  #     cells = T,
-  #     touches = T
-  #   ) %>%
-  #   na.omit
-  # 
-  # cluster_to_state_prediction_matrix <-
-  #   sparseMatrix(i = cluster_to_district_prediction$cell,
-  #                j = cluster_to_district_prediction$OTHREGCO,
-  #                x = 1)[prediction_id_nonmiss,]
-  
+
   
   
   # Create a prediction (INLA) A matrix based on the coordinates
@@ -798,10 +733,7 @@ prediction <- function(model, prediction_data, mesh, round) {
     cbind(model$summary.random$d$ID, posterior_latent[index_D,]) %>% as_tibble() %>% right_join(tibble(V1 =
                                                                                                          district_boundaries$REGCODE)) %>%
     mutate(across(everything(), ~ replace_na(.x, 0))) %>% select(-V1) %>% as.matrix
-  # xT <-
-  #   cbind(model$summary.random$t$ID, posterior_latent[index_T,]) %>% as_tibble() %>% right_join(tibble(V1 =
-  #                                                                                                        unique(district_boundaries$OTHREGCO))) %>%
-  #   mutate(across(everything(), ~ replace_na(.x, 0))) %>% select(-V1) %>% as.matrix
+
   
   xX <- posterior_latent[index_X,]
   
@@ -813,8 +745,7 @@ prediction <- function(model, prediction_data, mesh, round) {
     as.matrix(prediction_covariates_matrix_non_miss) %*% as.matrix(xX) +
       as.matrix(A_prediction) %*% as.matrix(xS) +
       as.matrix(cluster_to_district_prediction_matrix) %*% as.matrix(xD) #+
-      # as.matrix(cluster_to_state_prediction_matrix) %*% as.matrix(xT) +
-      # as.matrix(sIID)
+        # as.matrix(sIID)
   )
   
   
@@ -857,17 +788,17 @@ aggregation_to_boundaries <-
     
     
     if (round == "round1") {
-      pop <- rast("raster/round1/ken_ppp_2014_1km_Aggregated_UNadj.tif") %>%
+      pop <- rast("raster/round1/ken_ppp_2014.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
-          method = "average",
+          method = "sum",
           threads = T
         ) / 1000
     } else if (round == "round2") {
-      pop <- rast("raster/round2/ken_ppp_2020_1km_Aggregated_UNadj.tif") %>%
+      pop <- rast("raster/round2/ken_ppp_2020.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
-          method = "average",
+          method = "sum",
           threads = T
         ) / 1000
     }
@@ -915,13 +846,19 @@ aggregation_to_boundaries <-
     # Calculate total population per ID
     prediction_raster_to_district_dt[, total_pop := sum(pop, na.rm = TRUE), by = ID]
     
+    # # Calculate pop_prop and weight
+    # prediction_raster_to_district_dt[, c("pop_prop", "weight") := .(pop / total_pop, fraction * (pop / total_pop))]
+    
+    
+    
     # Calculate pop_prop and weight
-    prediction_raster_to_district_dt[, c("pop_prop", "weight") := .(pop / total_pop, fraction * (pop / total_pop))]
+    prediction_raster_to_district_dt[, c("pop_prop", "weight") := .(pop / total_pop, fraction * pop)]
     
     # Define a function for weighted.mean
     weighted.mean.dt <-
       function(x, w)
         sum(x * w, na.rm = TRUE) / sum(w, na.rm = TRUE)
+
     
     # Apply the weighted.mean.dt function across columns mcmc1:mcmc10000
     result_dt <-

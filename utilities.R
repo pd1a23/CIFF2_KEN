@@ -281,3 +281,96 @@ transform_and_scale <- function(untransformed_data,round) {
   ))
   
 }
+
+
+transform_and_scale <- function(untransformed_data,round) {
+  # Input:
+  # Data frame consisting with covariate names appended
+  # with the corresponding power transformation number
+  
+  scaled_transformed_cluster_data <- untransformed_data
+  scaled_transformed_raster_data <- list()
+  
+  
+  covariates <- untransformed_data %>% dplyr::select(-c(1:13))
+  scaled_covs <- covariates
+  
+  for (ii in 1:ncol(covariates)) {
+    print(ii)
+    covariate <- covariates %>% pull(names(covariates)[[ii]])
+    covariate_name <- names(covariates)[[ii]]
+    
+    grid <- list.files(path = paste0("raster/",round,"/"),
+                       pattern = covariate_name,
+                       full.names = T) %>%
+      rast() %>%
+      values()
+    
+    
+    # Account for any covariates that have negative values- it just
+    # shifts them to have a minimum of 0
+    
+    # if (any(grid < 0, na.rm = T)) {
+    #   covariate = covariate + abs(min(grid, na.rm = T))
+    #   grid = grid + abs(min(grid, na.rm = T))
+    # }
+    # 
+    # transformation_inter <-
+    #   variable_transformation(untransformed_data %>% dplyr::select(total, count),
+    #                           covariate,
+    #                           grid)
+    # transformed_covariate <- transformation_inter[[1]]
+    # transformation <- transformation_inter[[2]]
+    
+    
+    # Apply power transformation according to the
+    # appended power transformation number
+    
+    # if (is.na(transformation)) {
+    #   transformed_grid <- grid
+    #   
+    # } else if (transformation == 0) {
+    #   transformed_grid <- log(grid + delta(grid))
+    #   
+    # } else if (transformation < 0) {
+    #   transformed_grid <-
+    #     -((grid + delta(grid)) ^ transformation)
+    #   
+    # } else {
+    #   transformed_grid <- grid ^ transformation
+    #   
+    # }
+    
+    scaled_grid <-
+      scale(grid)
+    
+    scaling_attributes <- attributes(scaled_grid)
+    
+    scaled_covariate <-
+      (covariate - scaling_attributes$`scaled:center`) / scaling_attributes$`scaled:scale`
+    
+    
+    
+    scaled_transformed_cluster_data[[covariate_name]] <-
+      scaled_covariate
+    scaled_transformed_raster_data[[covariate_name]] <-
+      as.vector(scaled_grid)
+    
+    
+  }
+  
+  # Output:
+  # A list of #aggregated, transformed and scaled raster
+  # values of the covariates
+  
+  scaled_transformed_cluster_data
+  
+  return(list(
+    scaled_transformed_cluster_data,
+    as_tibble(scaled_transformed_raster_data)
+  ))
+  
+}
+
+
+
