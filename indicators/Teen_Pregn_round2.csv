@@ -1,10 +1,3 @@
-Definition: Percentage of youngest children under 6 months who are living with their mother who are exclusively breastfed under 6 months of age,Women aged 15 to 19 who have begun childbearing which includes women aged 15 to 19 who have had a live birth or that are pregnant at the time of the interview,,
-Numerator: Number of women who either have had a birth or who are pregnant at the time of interview (v201 > 0 or v213 = 1),,,
-Denominator: All women age 15-19 including those without a birth (v013 = 1),,,
-,,,
-Average ,0.154398913,,StatCompiler =14.4
-,,,
-,,,
 Cluster,allteenagers,teenagepregnancy,
 1,1,0,0
 2,0,0,.

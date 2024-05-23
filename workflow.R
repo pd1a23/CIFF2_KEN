@@ -14,82 +14,82 @@ source("utilities.R")
 output_folder <- "results/"
 
 
-workflow <- function(indicator_name) {
-  indicator_check(indicator_name)
-  
-  indicator_fit(indicator_name)
-  
-  
-}
-
-
-indicator_check <- function(indicator_name) {
-  ##check indicator files for both rounds are in the indicators folder
-  
-  
-  if (any(!(
-    paste(indicator_name, c("round1.xlsx", "round2.xlsx"), sep = "_") %in%
-    list.files(
-      path = "indicators/",
-      pattern = indicator_name,
-      full.names = F
-    )
-    
-  ))) {
-    stop(
-      "Please check that the indicator name is spelled correctly,
-      and that the indicator files for both rounds are in the indicators folder
-      and are of the form indicatorname_round1.xlsx indicatorname_round2.xlsx"
-    )
-    
-  }
-  
-  
-  ##check covariates exist
-  
-  
-  if (any(!(
-    c("covariates_round1.csv", "covariates_round2.csv") %in%
-    list.files(
-      path = "covariates/",
-      pattern = "covariates",
-      full.names = F
-    )
-    
-  ))) {
-    stop(
-      "Please check that the covariate files for both rounds are in the covariates
-      folderand are of the form covariates_round1.csv covariates_round2.csv"
-    )
-    
-  }
-  
-  ##check the raster covariates exist
-  
-  covariates_round1 <- read_csv("covariates/covariates_round1.csv")
-  covariates_round2 <- read_csv("covariates/covariates_round2.csv")
-  
-  
-  covariate_names <-
-    dplyr::union(names(covariates_round1), names(covariates_round2))
-  
-  
-  if (any(!(
-    paste(covariate_names[covariate_names != "DHSCLUST"], ".tif", sep = "") %in%
-    list.files(
-      path = "covariates/",
-      pattern = ".tif",
-      full.names = F
-    )
-  ))) {
-    stop(
-      "Please check that all required raster covariates are in the covariates
-      folder and are in tif format"
-    )
-  }
-  
-  
-}
+# workflow <- function(indicator_name) {
+#   indicator_check(indicator_name)
+#   
+#   indicator_fit(indicator_name)
+#   
+#   
+# }
+# 
+# 
+# indicator_check <- function(indicator_name) {
+#   ##check indicator files for both rounds are in the indicators folder
+#   
+#   
+#   if (any(!(
+#     paste(indicator_name, c("round1.xlsx", "round2.xlsx"), sep = "_") %in%
+#     list.files(
+#       path = "indicators/",
+#       pattern = indicator_name,
+#       full.names = F
+#     )
+#     
+#   ))) {
+#     stop(
+#       "Please check that the indicator name is spelled correctly,
+#       and that the indicator files for both rounds are in the indicators folder
+#       and are of the form indicatorname_round1.xlsx indicatorname_round2.xlsx"
+#     )
+#     
+#   }
+#   
+#   
+#   ##check covariates exist
+#   
+#   
+#   if (any(!(
+#     c("covariates_round1.csv", "covariates_round2.csv") %in%
+#     list.files(
+#       path = "covariates/",
+#       pattern = "covariates",
+#       full.names = F
+#     )
+#     
+#   ))) {
+#     stop(
+#       "Please check that the covariate files for both rounds are in the covariates
+#       folderand are of the form covariates_round1.csv covariates_round2.csv"
+#     )
+#     
+#   }
+#   
+#   ##check the raster covariates exist
+#   
+#   covariates_round1 <- read_csv("covariates/covariates_round1.csv")
+#   covariates_round2 <- read_csv("covariates/covariates_round2.csv")
+#   
+#   
+#   covariate_names <-
+#     dplyr::union(names(covariates_round1), names(covariates_round2))
+#   
+#   
+#   if (any(!(
+#     paste(covariate_names[covariate_names != "DHSCLUST"], ".tif", sep = "") %in%
+#     list.files(
+#       path = "covariates/",
+#       pattern = ".tif",
+#       full.names = F
+#     )
+#   ))) {
+#     stop(
+#       "Please check that all required raster covariates are in the covariates
+#       folder and are in tif format"
+#     )
+#   }
+#   
+#   
+# }
 
 
 indicator_fit <- function(indicator_name) {
@@ -152,8 +152,44 @@ indicator_fit <- function(indicator_name) {
     )
   )
   
-  print("starting district aggregation")
+  print("starting county aggregation")
   
+  aggregation_to_boundaries(
+    round1_prediction,
+    change = FALSE,
+    target_boundary_file = "shapes/Kenya_adm1_uscb_2023.shp",
+    file_name = indicator_round1,
+    boundary_type = "county",
+    raw=T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round1"
+  )
+  aggregation_to_boundaries(
+    round2_prediction,
+    change = FALSE,
+    target_boundary_file = "shapes/Kenya_adm1_uscb_2023.shp",
+    file_name = indicator_round2,
+    boundary_type = "county",
+    raw = T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round2"
+  )
+  
+  aggregation_to_boundaries(
+    change_prediction,
+    change = TRUE,
+    target_boundary_file = "shapes/Kenya_adm1_uscb_2023.shp",
+    file_name = paste(indicator_name, "change", sep = "_"),
+    boundary_type = "county",
+    raw=T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round2"
+  )
+  
+  
+  # 
+  ##County aggregation for validation to representative county boundaries
+
   aggregation_to_boundaries(
     round1_prediction,
     change = FALSE,
@@ -174,57 +210,48 @@ indicator_fit <- function(indicator_name) {
     boundary_names = c("DHSREGEN", "REGNAME"),
     round="round2"
   )
-  # aggregation_to_boundaries(
-  #   change_prediction,
-  #   change = TRUE,
-  #   target_boundary_file = "shapes/district_boundary.gpkg",
-  #   file_name = paste(indicator_name, "change", sep = "_"),
-  #   boundary_type = "district"
-  # )
-  # 
-  ##District aggregation for validation to representative district boundaries
-  # aggregation_to_boundaries(
-  #   round1_prediction,
-  #   change = FALSE,
-  #   target_boundary_file = "shapes/round1/sdr_subnational_boundaries2.shp",
-  #   file_name = paste(indicator_round1, sep = "_"),
-  #   boundary_type = "district_validation",
-  #   raw = FALSE
-  # )
-  # aggregation_to_boundaries(
-  #   round2_prediction,
-  #   change = FALSE,
-  #   target_boundary_file = "shapes/round2/sdr_subnational_boundaries2.shp",
-  #   file_name = paste(indicator_round2, sep = "_"),
-  #   boundary_type = "district_validation",
-  #   raw = FALSE
-  # )
   
-  ##State Aggregations
-  # aggregation_to_boundaries(
-  #   round1_prediction,
-  #   change = FALSE,
-  #   target_boundary_file = "shapes/state_boundary.gpkg",
-  #   file_name = indicator_round1,
-  #   boundary_type = "state",
-  #   raw = FALSE
-  # )
-  # aggregation_to_boundaries(
-  #   round2_prediction,
-  #   change = FALSE,
-  #   target_boundary_file = "shapes/state_boundary.gpkg",
-  #   file_name = indicator_round2,
-  #   boundary_type = "state",
-  #   raw = FALSE
-  # )
-  # aggregation_to_boundaries(
-  #   change_prediction,
-  #   change = TRUE,
-  #   target_boundary_file = "shapes/state_boundary.gpkg",
-  #   file_name = paste(indicator_name, "change", sep = "_"),
-  #   boundary_type = "state",
-  #   raw = FALSE
-  # )
+  
+  ##Sub County aggregation 
+  
+  
+  
+  
+  aggregation_to_boundaries(
+    round1_prediction,
+    change = FALSE,
+    target_boundary_file = "shapes/Kenya_adm2_uscb_2023.shp",
+    file_name = indicator_round1,
+    boundary_type = "county",
+    raw=T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round1"
+  )
+  aggregation_to_boundaries(
+    round2_prediction,
+    change = FALSE,
+    target_boundary_file = "shapes/Kenya_adm2_uscb_2023.shp",
+    file_name = indicator_round2,
+    boundary_type = "county",
+    raw = T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round2"
+  )
+  
+  aggregation_to_boundaries(
+    change_prediction,
+    change = TRUE,
+    target_boundary_file = "shapes/Kenya_adm2_uscb_2023.shp",
+    file_name = paste(indicator_name, "change", sep = "_"),
+    boundary_type = "county",
+    raw=T,
+    boundary_names = c("DHSREGEN", "REGNAME"),
+    round="round2"
+  )
+  
+  
+  
+
   
   print("starting high res output")
   
@@ -794,7 +821,7 @@ aggregation_to_boundaries <-
           method = "sum",
           threads = T
         ) / 1000
-    } else if (round == "round2") {
+    } else if (round == "round2"|round=="change") {
       pop <- rast("raster/population/ken_ppp_2020.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
@@ -923,7 +950,7 @@ aggregation_to_boundaries <-
   }
 
 
-high_res_output <- function(inv_lpred, file_name) {
+high_res_output <- function(inv_lpred, indicator_name,round) {
   
   mastergrid_water_subtract_district_crop <-
     mastergrid_water_subtract_district_crop <-
@@ -951,14 +978,16 @@ high_res_output <- function(inv_lpred, file_name) {
     out_raster %>%
     aggregate(fact = 5, na.rm = T)
   
+  
   writeRaster(
     out_raster,
     filename = paste0(
       output_folder,
-      file_name,
+      indicator_name,
       "_",
-      c("mean", "sd", "low_95", "upper_95", "median") ,
-      "_high_res_surfaces.tif"
+      round,
+      c("", "sd", "L", "U", "median") ,
+      ".tif"
     ),
     overwrite = T
   )
