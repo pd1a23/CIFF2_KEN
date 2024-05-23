@@ -788,14 +788,14 @@ aggregation_to_boundaries <-
     
     
     if (round == "round1") {
-      pop <- rast("raster/round1/ken_ppp_2014.tif") %>%
+      pop <- rast("raster/population/ken_ppp_2014.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
           method = "sum",
           threads = T
         ) / 1000
     } else if (round == "round2") {
-      pop <- rast("raster/round2/ken_ppp_2020.tif") %>%
+      pop <- rast("raster/population/ken_ppp_2020.tif") %>%
         terra::resample(
           mastergrid_water_subtract_district_crop,
           method = "sum",
